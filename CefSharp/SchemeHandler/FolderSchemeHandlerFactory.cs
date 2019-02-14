@@ -21,7 +21,8 @@ namespace CefSharp.SchemeHandler
         private string defaultPage;
         private string schemeName;
         private string hostName;
-        
+        private readonly FileShare resourceFileShare;
+
         /// <summary>
         /// Initialize a new instance of FolderSchemeHandlerFactory
         /// </summary>
@@ -29,12 +30,13 @@ namespace CefSharp.SchemeHandler
         /// <param name="schemeName">if not null then schemeName checking will be implemented</param>
         /// <param name="hostName">if not null then hostName checking will be implemented</param>
         /// <param name="defaultPage">default page if no page specified, defaults to index.html</param>
-        public FolderSchemeHandlerFactory(string rootFolder, string schemeName = null, string hostName = null, string defaultPage = "index.html")
+        public FolderSchemeHandlerFactory(string rootFolder, string schemeName = null, string hostName = null, string defaultPage = "index.html", FileShare resourceFileShare = FileShare.Read)
         {
             this.rootFolder = Path.GetFullPath(rootFolder);
             this.defaultPage = defaultPage;
             this.schemeName = schemeName;
             this.hostName = hostName;
+            this.resourceFileShare = resourceFileShare;
 
             if (!Directory.Exists(this.rootFolder))
             {
@@ -70,7 +72,7 @@ namespace CefSharp.SchemeHandler
             if (this.hostName != null && !uri.Host.Equals(this.hostName, StringComparison.OrdinalIgnoreCase))
             {
                 return ResourceHandler.ForErrorMessage(string.Format("HostName {0} does not match the expected HostName of {1}.", uri.Host, this.hostName), HttpStatusCode.NotFound);
-            }			
+            }
 
             //Get the absolute path and remove the leading slash
             var asbolutePath = uri.AbsolutePath.Substring(1);
@@ -83,11 +85,11 @@ namespace CefSharp.SchemeHandler
             var filePath = Path.GetFullPath(Path.Combine(rootFolder, asbolutePath));
 
             //Check the file requested is within the specified path and that the file exists
-            if(filePath.StartsWith(rootFolder, StringComparison.OrdinalIgnoreCase) && File.Exists(filePath))
+            if (filePath.StartsWith(rootFolder, StringComparison.OrdinalIgnoreCase) && File.Exists(filePath))
             {
                 var fileExtension = Path.GetExtension(filePath);
                 var mimeType = ResourceHandler.GetMimeType(fileExtension);
-                var stream = File.OpenRead(filePath);
+                var stream = new FileStream(fileExtension, FileMode.Open, FileAccess.Read, this.resourceFileShare);
                 return ResourceHandler.FromStream(stream, mimeType);
             }
 
